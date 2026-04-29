@@ -1,0 +1,31 @@
+# build outputs
+/build/
+
+# plugin artifacts produced by `build`
+/plugin/td_librediffusion_top.dll
+/plugin/td_librediffusion_top.lib
+/plugin/td_librediffusion_top.exp
+/plugin/td_librediffusion_top.manifest
+
+# runtime DLLs staged by `stage`
+/plugin/librediffusion.dll
+/plugin/nvinfer*.dll
+/plugin/cudart*.dll
+/plugin/curand*.dll
+/plugin/cublas*.dll
+/plugin/cublasLt*.dll
+/plugin/npp*.dll
+
+# TouchDesigner local state
+# (td/td-librediffusion.toe is the canonical sample and IS tracked)
+/td/Backup/
+/td/td-librediffusion.*.toe
+/td/debugview.log
+*.toe.bak
+
+# obsolete launcher (no longer needed since LoadLibraryEx fix)
+/launch-td.cmd
+
+# Visual Studio
+.vs/
+*.user
