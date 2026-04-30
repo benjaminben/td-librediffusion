@@ -306,7 +306,8 @@ runner_cuda_stream_t Runner::cuda_stream() const
 {
     if(!impl_->pipeline)
         return nullptr;
-    return librediffusion_pipeline_get_stream(impl_->pipeline);
+    return static_cast<runner_cuda_stream_t>(
+        librediffusion_pipeline_get_stream(impl_->pipeline));
 }
 
 bool Runner::process_gpu_rgba8(

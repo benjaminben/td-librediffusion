@@ -38,6 +38,17 @@ endif()
 # ---- CUDA runtime (needed by the TD plugin to copy cudaArrays in CUDA mode).
 find_package(CUDAToolkit REQUIRED)
 
+# Enable CUDA as a language for the small flip kernel compiled into the plugin.
+# Default arch list covers every CC TensorRT ships builder resources for in
+# this repo (sm_75 Turing through sm_120 Blackwell), plus a PTX fallback so
+# the driver can JIT for any future arch CUDA 13's nvcc does not yet know.
+# CUDA 13+ is the baseline requirement, so this list compiles cleanly out of
+# the box — users do not need to pass -DCMAKE_CUDA_ARCHITECTURES.
+if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+    set(CMAKE_CUDA_ARCHITECTURES 75 80 86 89 90 100 120 120-virtual)
+endif()
+enable_language(CUDA)
+
 # ---- Runner (host-agnostic). Links librediffusion.lib so any consumer
 # (TD plugin now, standalone host later) just depends on this target.
 add_library(librediffusion_runner STATIC
@@ -61,6 +72,13 @@ target_link_libraries(librediffusion_runner PUBLIC
 # ---- TD plugin (throwaway glue).
 add_library(td_librediffusion_top MODULE
     plugin/td_top_plugin.cpp
+    plugin/librediffusion_top.cpp
+    plugin/librediffusion_top_gpu.cpp
+    plugin/librediffusion_top_cpu.cpp
+    plugin/librediffusion_top_params.cpp
+    plugin/flip_kernel.cu
+    plugin/librediffusion_top.hpp
+    plugin/fps_meter.hpp
 )
 set_target_properties(td_librediffusion_top PROPERTIES
     PREFIX ""
@@ -84,7 +102,11 @@ if(MSVC)
     )
     target_link_libraries(td_librediffusion_top PRIVATE delayimp.lib)
 
-    target_compile_options(td_librediffusion_top PRIVATE /W3 /permissive-)
+    # Gate MSVC-style flags to CXX so nvcc does not parse them as input paths.
+    target_compile_options(td_librediffusion_top PRIVATE
+        $<$<COMPILE_LANGUAGE:CXX>:/W3>
+        $<$<COMPILE_LANGUAGE:CXX>:/permissive->
+    )
     target_compile_options(librediffusion_runner PRIVATE /W3 /permissive-)
 endif()
 

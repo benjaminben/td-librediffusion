@@ -12,11 +12,14 @@
 #include <string>
 #include <vector>
 
-#ifdef __CUDA_RUNTIME_H__
-using runner_cuda_stream_t = cudaStream_t;
-#else
-using runner_cuda_stream_t = void*;
-#endif
+// Forward-declare CUDA's opaque stream tag so the public API has a stable
+// type regardless of whether <cuda_runtime.h> has been included by the
+// consumer. cudaStream_t is itself a typedef for CUstream_st*, so a TU
+// that does include cuda_runtime.h can pass cudaStream_t values to these
+// functions without a cast — and the mangled symbol stays the same either
+// way, eliminating the include-order ABI footgun.
+struct CUstream_st;
+using runner_cuda_stream_t = CUstream_st*;
 
 namespace librediff
 {

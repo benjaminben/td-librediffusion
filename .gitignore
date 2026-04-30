@@ -19,9 +19,10 @@
 # TouchDesigner local state
 # (td/td-librediffusion.toe is the canonical sample and IS tracked)
 /td/Backup/
-/td/td-librediffusion.*.toe
 /td/debugview.log
 *.toe.bak
+*.*.toe
+test.toe
 
 # obsolete launcher (no longer needed since LoadLibraryEx fix)
 /launch-td.cmd
