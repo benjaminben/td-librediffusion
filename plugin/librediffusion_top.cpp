@@ -200,6 +200,10 @@ void LibreDiffusionTOP::execute(TOP_Output* output, const OP_Inputs* inputs, voi
 
         if(myRunner && myRunner->is_initialized() && !myLastPositive.empty())
         {
+            // TD's CUDA arrays are bottom-up; the VAE encoder expects
+            // top-down. Flip the staged input before inference so the
+            // encoder, decoder, and our output flip all stay consistent.
+            launch_flip_rgba8_inplace(myRgbaInDevice, width, height, pitch, stream);
             const bool ok = (mode == 1)
                 ? runInferenceCpu(width, height, bytes, stream)
                 : runInferenceGpu(width, height, stream);
@@ -208,8 +212,9 @@ void LibreDiffusionTOP::execute(TOP_Output* output, const OP_Inputs* inputs, voi
             inferred = true;
         }
 
-        // VAE writes row 0 = top; TD's GL-backed CUDA texture displays row
-        // 0 = bottom. V-flip on inferred output; passthrough stays as-is.
+        // VAE writes row 0 = top; TD's CUDA texture wants row 0 = bottom.
+        // Flip inferred output back; passthrough stayed bottom-up the whole
+        // time and needs no flip.
         void* src = inferred ? myRgbaOutDevice : myRgbaInDevice;
         if(inferred)
             launch_flip_rgba8_inplace(src, width, height, pitch, stream);
