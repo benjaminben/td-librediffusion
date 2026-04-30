@@ -82,6 +82,7 @@ void LibreDiffusionTOP::execute(TOP_Output* output, const OP_Inputs* inputs, voi
     const float guidance = static_cast<float>(inputs->getParDouble(kParGuidance));
     const int mode = inputs->getParInt(kParMode);
     const bool trackMetrics = inputs->getParInt(kParTrackMetrics) != 0;
+    const float maxFps = static_cast<float>(inputs->getParDouble(kParMaxInferenceFps));
 
     myMeter.set_enabled(trackMetrics);
     myMeter.tick();
@@ -186,6 +187,7 @@ void LibreDiffusionTOP::execute(TOP_Output* output, const OP_Inputs* inputs, voi
                 break;
             }
             myRgbaBytes = bytes;
+            myHasCachedOutput = false;
         }
 
         cudaError_t err = cudaMemcpy2DFromArrayAsync(
@@ -198,25 +200,53 @@ void LibreDiffusionTOP::execute(TOP_Output* output, const OP_Inputs* inputs, voi
             break;
         }
 
-        if(myRunner && myRunner->is_initialized() && !myLastPositive.empty())
+        const bool canInfer =
+            myRunner && myRunner->is_initialized() && !myLastPositive.empty();
+        bool throttled = false;
+        if(canInfer && maxFps > 0.0f && myHasCachedOutput)
+        {
+            const auto now = std::chrono::steady_clock::now();
+            const double elapsed =
+                std::chrono::duration<double>(now - myLastInferenceTime).count();
+            if(elapsed < 1.0 / static_cast<double>(maxFps))
+                throttled = true;
+        }
+
+        if(canInfer && !throttled)
         {
             // TD's CUDA arrays are bottom-up; the VAE encoder expects
             // top-down. Flip the staged input before inference so the
             // encoder, decoder, and our output flip all stay consistent.
             launch_flip_rgba8_inplace(myRgbaInDevice, width, height, pitch, stream);
+            myLastInferenceTime = std::chrono::steady_clock::now();
             const bool ok = (mode == 1)
                 ? runInferenceCpu(width, height, bytes, stream)
                 : runInferenceGpu(width, height, stream);
             if(!ok)
                 break;
             inferred = true;
+            myHasCachedOutput = true;
         }
 
-        // VAE writes row 0 = top; TD's CUDA texture wants row 0 = bottom.
-        // Flip inferred output back; passthrough stayed bottom-up the whole
-        // time and needs no flip.
-        void* src = inferred ? myRgbaOutDevice : myRgbaInDevice;
+        // Output selection: a fresh inference wrote myRgbaOutDevice top-down
+        // and needs flipping back; a throttled cook reuses the prior
+        // (already-bottom-up) cached result; otherwise passthrough the input.
+        void* src;
+        bool flipBack = false;
         if(inferred)
+        {
+            src = myRgbaOutDevice;
+            flipBack = true;
+        }
+        else if(throttled)
+        {
+            src = myRgbaOutDevice;
+        }
+        else
+        {
+            src = myRgbaInDevice;
+        }
+        if(flipBack)
             launch_flip_rgba8_inplace(src, width, height, pitch, stream);
 
         err = cudaMemcpy2DToArrayAsync(
@@ -286,6 +316,7 @@ void LibreDiffusionTOP::tryInit(const std::string& folder, int width, int height
                                 int timestep)
 {
     myRunner.reset();
+    myHasCachedOutput = false;
 
     librediff::Runner::Config cfg;
     cfg.clip_engine_path = join_path(folder, "clip.engine");

@@ -80,6 +80,20 @@ void LibreDiffusionTOP::setupParameters(OP_ParameterManager* manager, void*)
         np.defaultValues[0] = 1;
         manager->appendToggle(np);
     }
+    {
+        OP_NumericParameter np;
+        np.name = kParMaxInferenceFps;
+        np.label = "Max Inference FPS";
+        np.page = "LibreDiffusion";
+        np.defaultValues[0] = 0.0;  // 0 = unlimited
+        np.minSliders[0] = 0.0;
+        np.maxSliders[0] = 60.0;
+        np.minValues[0] = 0.0;
+        np.maxValues[0] = 240.0;
+        np.clampMins[0] = true;
+        np.clampMaxes[0] = true;
+        manager->appendFloat(np);
+    }
 }
 
 } // namespace librediff_td

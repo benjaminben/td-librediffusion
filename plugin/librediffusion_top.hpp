@@ -4,6 +4,7 @@
 #include "fps_meter.hpp"
 #include "librediffusion_runner.hpp"
 
+#include <chrono>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -18,6 +19,7 @@ inline constexpr const char* kParGuidance = "Guidance";
 inline constexpr const char* kParTimestep = "Timestep";
 inline constexpr const char* kParMode = "Mode";              // GPU=0, CPU=1
 inline constexpr const char* kParTrackMetrics = "Trackmetrics";
+inline constexpr const char* kParMaxInferenceFps = "Maxinferencefps";
 
 class LibreDiffusionTOP : public TD::TOP_CPlusPlusBase
 {
@@ -58,6 +60,9 @@ private:
     uint8_t* myHostRgbaOut = nullptr;
     size_t myHostBytes = 0;
     int myDiagCount = 0;
+
+    bool myHasCachedOutput = false;
+    std::chrono::steady_clock::time_point myLastInferenceTime{};
 
     FpsMeter myMeter;
 };
