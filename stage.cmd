@@ -15,8 +15,9 @@ REM                    The bin\ subfolder must contain nvinfer_10.dll etc.
 REM                    Example: C:\src\TensorRT-10.16.1.11
 REM
 REM   CUDA_BIN         Path to the directory containing the CUDA runtime DLLs
-REM                    (cudart64_13.dll, cublas64_13.dll, ...).
-REM                    Example: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.2\bin
+REM                    (cudart64_13.dll, cublas64_13.dll, ...). On CUDA 13+
+REM                    these live under bin\x64, not bin\ directly.
+REM                    Example: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.2\bin\x64
 REM
 REM Optional override: pass any of the three as a command-line argument:
 REM   stage <build-dir> <tensorrt-root> <cuda-bin>
@@ -43,7 +44,7 @@ if not "%MISSING%"=="" (
     echo Set them in your shell, e.g.:
     echo   set LIBREDIFF_BUILD=C:\src\librediffusion-bb\build
     echo   set TENSORRT_ROOT=C:\src\TensorRT-10.16.1.11
-    echo   set CUDA_BIN=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.2\bin
+    echo   set CUDA_BIN=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.2\bin\x64
     echo.
     echo Or pass them positionally: stage ^<build^> ^<trt-root^> ^<cuda-bin^>
     exit /b 1

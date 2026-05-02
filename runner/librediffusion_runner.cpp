@@ -41,6 +41,7 @@ struct Runner::Impl
     librediffusion_clip_handle clip = nullptr;
     bool initialized = false;
     bool prompt_ready = false;
+    bool combined_engine = false;
     int width = 0;
     int height = 0;
     int batch_size = 0;
@@ -134,11 +135,16 @@ bool Runner::init(const Config& cfg, std::string* err_out)
     if(!ensure_libraries_loaded(err_out))
         return false;
 
+    const bool use_combined = !cfg.combined_unet_controlnet_engine_path.empty();
     TDDBG("init: " << cfg.width << "x" << cfg.height
                    << " batch=" << cfg.batch_size
-                   << " timesteps=" << cfg.timestep_indices.size());
+                   << " timesteps=" << cfg.timestep_indices.size()
+                   << " controlnet=" << (use_combined ? "ON" : "OFF"));
     TDDBG("  clip=" << cfg.clip_engine_path);
-    TDDBG("  unet=" << cfg.unet_engine_path);
+    if(use_combined)
+        TDDBG("  unet+cn=" << cfg.combined_unet_controlnet_engine_path);
+    else
+        TDDBG("  unet=" << cfg.unet_engine_path);
     TDDBG("  vae_enc=" << cfg.vae_encoder_path);
     TDDBG("  vae_dec=" << cfg.vae_decoder_path);
 
@@ -168,8 +174,17 @@ bool Runner::init(const Config& cfg, std::string* err_out)
     if(!check(librediffusion_config_set_text_config(
                   c, kTextSeqLen, kTextHiddenDimSDTurbo, kClipPadTokenSDTurbo),
               "set_text_config", err_out)) return false;
-    if(!check(librediffusion_config_set_unet_engine(c, cfg.unet_engine_path.c_str()),
-              "set_unet_engine", err_out)) return false;
+    if(use_combined)
+    {
+        if(!check(librediffusion_config_set_combined_unet_controlnet_engine(
+                      c, cfg.combined_unet_controlnet_engine_path.c_str()),
+                  "set_combined_unet_controlnet_engine", err_out)) return false;
+    }
+    else
+    {
+        if(!check(librediffusion_config_set_unet_engine(c, cfg.unet_engine_path.c_str()),
+                  "set_unet_engine", err_out)) return false;
+    }
     if(!check(librediffusion_config_set_vae_encoder(c, cfg.vae_encoder_path.c_str()),
               "set_vae_encoder", err_out)) return false;
     if(!check(librediffusion_config_set_vae_decoder(c, cfg.vae_decoder_path.c_str()),
@@ -209,6 +224,7 @@ bool Runner::init(const Config& cfg, std::string* err_out)
     impl_->height = cfg.height;
     impl_->batch_size = cfg.batch_size;
     impl_->timestep_indices = cfg.timestep_indices;
+    impl_->combined_engine = use_combined;
     impl_->initialized = true;
     TDDBG("init: complete");
     return true;
@@ -372,6 +388,44 @@ bool Runner::process_gpu_rgba8(
         return false;
 
     return true;
+}
+
+bool Runner::set_control_image_gpu(
+    const uint8_t* device_rgba, int width, int height,
+    runner_cuda_stream_t stream, std::string* err_out)
+{
+    if(!impl_->initialized)
+    {
+        if(err_out)
+            *err_out = "set_control_image_gpu: runner not initialized";
+        return false;
+    }
+    if(!impl_->combined_engine)
+        return true; // no-op when ControlNet is disabled
+    if(width != impl_->width || height != impl_->height)
+    {
+        TDDBG("!! set_control_image_gpu: dim mismatch input=" << width << "x" << height
+              << " engine=" << impl_->width << "x" << impl_->height);
+        if(err_out)
+            *err_out = "set_control_image_gpu: input dimensions don't match engine";
+        return false;
+    }
+    return check(
+        librediffusion_set_control_image_gpu(
+            impl_->pipeline, device_rgba, width, height, stream),
+        "set_control_image_gpu", err_out);
+}
+
+void Runner::set_controlnet_strength(float strength)
+{
+    if(!impl_->pipeline || !impl_->combined_engine)
+        return;
+    librediffusion_set_controlnet_strength(impl_->pipeline, strength);
+}
+
+bool Runner::combined_engine_mode() const
+{
+    return impl_->combined_engine;
 }
 
 } // namespace librediff

@@ -39,6 +39,10 @@ public:
         std::string unet_engine_path;
         std::string vae_encoder_path;
         std::string vae_decoder_path;
+        // ControlNet (v1, combined engine). When non-empty this overrides
+        // unet_engine_path and switches the pipeline into combined-engine
+        // mode. When empty the runner behaves identically to today.
+        std::string combined_unet_controlnet_engine_path;
         int width = 512;
         int height = 512;
         int batch_size = 1;
@@ -71,6 +75,21 @@ public:
     bool process_gpu_rgba8(
         const uint8_t* rgba_in_device, uint8_t* rgba_out_device, int width, int height,
         runner_cuda_stream_t stream, std::string* err_out);
+
+    // ControlNet (v1) per-frame input. Forwards an RGBA NHWC uint8 device
+    // pointer to the library, which performs a fused conversion directly
+    // into the engine's persistent control-image buffer. No-op if the
+    // runner was initialized without combined_unet_controlnet_engine_path.
+    bool set_control_image_gpu(
+        const uint8_t* device_rgba, int width, int height,
+        runner_cuda_stream_t stream, std::string* err_out);
+
+    // ControlNet (v1) per-frame strength. No-op if combined-engine mode
+    // is off.
+    void set_controlnet_strength(float strength);
+
+    // True if init() loaded a combined UNet+ControlNet engine.
+    bool combined_engine_mode() const;
 
     // The pipeline's internal CUDA stream. The TD plugin uses this so that
     // its cudaArray copies are ordered with respect to the inference work.

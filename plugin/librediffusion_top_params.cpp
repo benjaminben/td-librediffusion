@@ -94,6 +94,33 @@ void LibreDiffusionTOP::setupParameters(OP_ParameterManager* manager, void*)
         np.clampMaxes[0] = true;
         manager->appendFloat(np);
     }
+    {
+        // ControlNet (v1). On switches the engines-folder convention from
+        // unet.engine to unet_controlnet.engine and triggers a pipeline
+        // re-init. Toggling Off reverts to the plain UNet engine.
+        OP_StringParameter sp;
+        sp.name = kParControlnet;
+        sp.label = "ControlNet";
+        sp.page = "LibreDiffusion";
+        sp.defaultValue = "Off";
+        const char* labels[] = {"Off", "On"};
+        const char* names[] = {"Off", "On"};
+        manager->appendMenu(sp, 2, names, labels);
+    }
+    {
+        OP_NumericParameter np;
+        np.name = kParControlnetStrength;
+        np.label = "ControlNet Strength";
+        np.page = "LibreDiffusion";
+        np.defaultValues[0] = 1.0;
+        np.minSliders[0] = 0.0;
+        np.maxSliders[0] = 2.0;
+        np.minValues[0] = 0.0;
+        np.maxValues[0] = 2.0;
+        np.clampMins[0] = true;
+        np.clampMaxes[0] = true;
+        manager->appendFloat(np);
+    }
 }
 
 } // namespace librediff_td

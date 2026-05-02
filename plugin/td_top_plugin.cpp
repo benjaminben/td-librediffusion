@@ -23,7 +23,9 @@ DLLEXPORT void FillTOPPluginInfo(TOP_PluginInfo* info)
     customInfo.authorEmail->setString("");
 
     customInfo.minInputs = 1;
-    customInfo.maxInputs = 1;
+    // Input #1 = source video. Input #2 (optional) = ControlNet control image,
+    // consumed when the Controlnet parameter is On.
+    customInfo.maxInputs = 2;
 }
 
 DLLEXPORT TOP_CPlusPlusBase* CreateTOPInstance(const OP_NodeInfo* info, TOP_Context* context)

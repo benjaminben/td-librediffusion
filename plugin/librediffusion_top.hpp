@@ -20,6 +20,8 @@ inline constexpr const char* kParTimestep = "Timestep";
 inline constexpr const char* kParMode = "Mode";              // GPU=0, CPU=1
 inline constexpr const char* kParTrackMetrics = "Trackmetrics";
 inline constexpr const char* kParMaxInferenceFps = "Maxinferencefps";
+inline constexpr const char* kParControlnet = "Controlnet";  // Off=0, On=1
+inline constexpr const char* kParControlnetStrength = "Controlnetstrength";
 
 class LibreDiffusionTOP : public TD::TOP_CPlusPlusBase
 {
@@ -41,7 +43,8 @@ private:
     bool runInferenceCpu(int width, int height, size_t bytes, cudaStream_t stream);
     bool ensureHostBuffers(size_t bytes);
 
-    void tryInit(const std::string& folder, int width, int height, int timestep);
+    void tryInit(const std::string& folder, int width, int height, int timestep,
+                 bool controlnet_on);
 
     TD::TOP_Context* myContext;
     std::unique_ptr<librediff::Runner> myRunner;
@@ -52,10 +55,16 @@ private:
     int myLastHeight = 0;
     int myLastTimestep = -1;
     float myLastGuidance = -1.0f;
+    int myLastControlnetMode = -1;        // -1 unknown, 0 off, 1 on (drives re-init)
+    float myLastControlnetStrength = -1.0f;
+    std::string myLastErrorMessage;       // surfaced via getInfoPopupString
 
     void* myRgbaInDevice = nullptr;
     void* myRgbaOutDevice = nullptr;
     size_t myRgbaBytes = 0;
+    // ControlNet input #2 staging (linear NHWC RGBA8 device buffer).
+    void* myControlRgbaDevice = nullptr;
+    size_t myControlRgbaBytes = 0;
     uint8_t* myHostRgbaIn = nullptr;
     uint8_t* myHostRgbaOut = nullptr;
     size_t myHostBytes = 0;
