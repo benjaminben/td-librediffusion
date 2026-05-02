@@ -30,3 +30,5 @@ test.toe
 # Visual Studio
 .vs/
 *.user
+
+*.local
