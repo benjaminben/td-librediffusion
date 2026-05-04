@@ -114,6 +114,20 @@ either VS 2022 BuildTools side-by-side or the legacy v143 toolset inside VS
 
 A sample `td/td-librediffusion.toe` is included for reference.
 
+## Plugin inputs
+
+The TOP takes one or two TOP inputs. Both follow the standard
+TouchDesigner TOP convention: **uint8 RGBA, bottom-up**.
+
+| Input | Required | Format | Notes |
+|---|---|---|---|
+| #1 | Yes | uint8 RGBA, bottom-up | Source frame for img2img. Must already match the engine's resolution (see Known limitations). |
+| #2 | When ControlNet=On | uint8 RGBA, bottom-up | OpenPose stick-figure (or other ControlNet conditioning image). Same format as input #1; the plugin flips it to top-down internally before handing it to the engine, so do not pre-flip in upstream Script TOPs. Dimensions must match input #1. |
+
+A Script TOP that emits an OpenPose stick figure into input #2 already
+complies with this contract by default — no flipping or format
+conversion is needed in the Python callback.
+
 ## Parameters
 
 | Parameter | Type | Default | Notes |

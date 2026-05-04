@@ -20,6 +20,7 @@
 # (td/td-librediffusion.toe is the canonical sample and IS tracked)
 /td/Backup/
 /td/debugview.log
+/td/__pycache__
 *.toe.bak
 *.*.toe
 test.toe

@@ -176,6 +176,11 @@ void LibreDiffusionTOP::execute(TOP_Output* output, const OP_Inputs* inputs, voi
     }
 
     // Input #2 = ControlNet control image. Required when Controlnet=On.
+    // Plugin-boundary contract: input #2 is uint8 RGBA, BOTTOM-UP --
+    // standard TouchDesigner TOP convention, identical to input #1. The
+    // engine itself consumes top-down RGBA; the flip happens internally
+    // via launch_flip_rgba8_inplace() further down (see the comment near
+    // that call site). Do NOT pre-flip in upstream Script TOPs.
     const OP_TOPInput* controlTop = inputs->getInputTOP(1);
     const OP_CUDAArrayInfo* controlArray = nullptr;
     if(controlnetMode == 1)
